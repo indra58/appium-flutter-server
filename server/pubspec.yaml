@@ -1,6 +1,6 @@
 name: appium_flutter_server
 description: "Appium Flutter server using Integration Test package for testing Flutter apps with Appium"
-version: 0.0.34
+version: 0.0.35
 homepage: "https://github.com/AppiumTestDistribution/appium-flutter-server"
 
 environment:
@@ -16,12 +16,12 @@ dependencies:
     sdk: flutter
 
   shelf_router: ^1.1.4
-  shelf: ^1.4.1
-  shelf_plus: ^1.9.2
+  shelf: ^1.4.2
+  shelf_plus: ^1.11.0
   path_provider: any
   synchronized: any
   package_info_plus: any
-  a_bridge: ^0.0.2
+  a_bridge: ^0.1.0
   device_info_plus: any
   image_picker: ^1.1.2
   path: ^1.9.0

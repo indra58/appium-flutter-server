@@ -17,7 +17,24 @@ class ElementSerializer {
 
     final widget = element.widget;
     final renderObject = element.renderObject;
-    final rect = renderObject?.paintBounds;
+    Rect? rect;
+    if (renderObject is RenderBox && renderObject.hasSize && renderObject.attached) {
+      try {
+        final origin = renderObject.localToGlobal(Offset.zero);
+        final size = renderObject.size;
+        final dpr = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.devicePixelRatio ?? 1.0;
+        rect = Rect.fromLTWH(
+          origin.dx * dpr,
+          origin.dy * dpr,
+          size.width * dpr,
+          size.height * dpr,
+        );
+      } catch (_) {
+        rect = renderObject.paintBounds;
+      }
+    } else {
+      rect = renderObject?.paintBounds;
+    }
 
     final children =
         await _serializeChildren(element, visited: visited, depth: depth);
@@ -26,12 +43,32 @@ class ElementSerializer {
     final visualProperties = await _serializeVisualProperties(widget);
     final stateProperties = _serializeStateProperties(widget);
 
+    String? keyString;
+    if (widget.key != null) {
+      keyString = widget.key.toString();
+    } else {
+      try {
+        final dynamic dw = widget;
+        final dynamic customId =
+            dw.keyId ??
+            dw.identifier ??
+            dw.id ??
+            dw.testId ??
+            dw.automationId ??
+            dw.testKey ??
+            dw.keyName;
+        if (customId != null) {
+          keyString = customId.toString();
+        }
+      } catch (_) {}
+    }
+
     return {
       'type': widget.runtimeType.toString(),
       'elementType': element.runtimeType.toString(),
       'description': widget.toStringShort(),
       'depth': depth,
-      if (widget.key != null) 'key': widget.key.toString(),
+      if (keyString != null) 'key': keyString,
       'attributes': attributes,
       'visual': visualProperties,
       'state': stateProperties,
@@ -83,6 +120,12 @@ class ElementSerializer {
       semanticsLabel = widget.properties.label;
     } else if (widget is Tooltip) {
       tooltip = widget.message;
+    } else if (widget is IconButton) {
+      tooltip = widget.tooltip;
+    } else if (widget is Icon) {
+      semanticsLabel = widget.semanticLabel;
+    } else if (widget is Image) {
+      semanticsLabel = widget.semanticLabel;
     } else if (widget is TextField) {
       hintText = widget.decoration?.hintText;
     }
@@ -135,20 +178,39 @@ class ElementSerializer {
     bool? enabled;
     bool? focused;
     bool? visible;
+    bool? checked;
+    bool? password;
 
     if (widget is EditableText) {
       focused = widget.focusNode.hasFocus;
+      password = widget.obscureText;
     } else if (widget is TextField) {
       enabled = widget.enabled ?? true;
       focused = widget.focusNode?.hasFocus ?? false;
+      password = widget.obscureText;
+    } else if (widget is Switch) {
+      checked = widget.value;
+      enabled = widget.onChanged != null;
+    } else if (widget is Checkbox) {
+      checked = widget.value ?? false;
+      enabled = widget.onChanged != null;
+    } else if (widget is Radio) {
+      checked = widget.value == widget.groupValue;
+      enabled = widget.onChanged != null;
+    } else if (widget is ButtonStyleButton) {
+      enabled = widget.enabled;
     } else if (widget is Visibility) {
       visible = widget.visible;
+    } else if (widget is Offstage) {
+      visible = !widget.offstage;
     }
 
     return {
       if (enabled != null) 'enabled': enabled,
       if (focused != null) 'focused': focused,
       if (visible != null) 'visible': visible,
+      if (checked != null) 'checked': checked,
+      if (password != null) 'password': password,
     };
   }
 }
